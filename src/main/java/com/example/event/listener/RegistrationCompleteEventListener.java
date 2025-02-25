@@ -3,13 +3,18 @@ package com.example.event.listener;
 import com.example.entity.AppUser;
 import com.example.event.RegistrationCompleteEvent;
 import com.example.service.imp.UserService;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Properties;
 import java.util.UUID;
 
 @Component
@@ -20,7 +25,7 @@ public class RegistrationCompleteEventListener
 
     private final UserService userService;
 
-    private final JavaMailSender mailSender;
+   private final JavaMailSender mailSender;
 
     private AppUser theUser;
 
@@ -35,14 +40,28 @@ public class RegistrationCompleteEventListener
         //4 Build the verification url to be sent to the user
         String url = event.getApplicationUrl()+"/api/v1/register/verifyEmail?token="+verificationToken;
         //5. Send the email.
-//        try {
-//            sendVerificationEmail(url);
-//        } catch (MessagingException | UnsupportedEncodingException e) {
-//            throw new RuntimeException(e);
-//        }
+        try {
+            sendVerificationEmail(url);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
         log.info("Click the link to verify your registration :  {}", url);
     }
-
-    private void sendVerificationEmail(String url) {
+    public void sendVerificationEmail(String url) throws MessagingException, UnsupportedEncodingException {
+        String subject = "Email Verification";
+        String senderName = "User Registration Portal Service";
+        String mailContent = "<p> Hi, "+ theUser.getFirstName()+ ", </p>"+
+                "<p>Thank you for registering with us,"+"" +
+                "Please, follow the link below to complete your registration.</p>"+
+                "<a href=\"" +url+ "\">Verify your email to activate your account</a>"+
+                "<p> Thank you <br> Users Registration Portal Service";
+        MimeMessage message = mailSender.createMimeMessage();
+        var messageHelper = new MimeMessageHelper(message);
+        messageHelper.setFrom("dailycodework@gmail.com", senderName);
+        messageHelper.setTo(theUser.getEmail());
+        messageHelper.setSubject(subject);
+        messageHelper.setText(mailContent, true);
+        mailSender.send(message);
     }
+
 }
